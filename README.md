@@ -1,8 +1,8 @@
 # ks - Kiz's C++ Standard Library
 
-https://img.shields.io/badge/License-MIT-yellow.svg
-https://img.shields.io/badge/C%2B%2B-17-blue.svg
-https://img.shields.io/badge/CMake-3.15+-brightgreen
+- https://img.shields.io/badge/License-MIT-yellow.svg
+- https://img.shields.io/badge/C%2B%2B-17-blue.svg
+- https://img.shields.io/badge/CMake-3.15+-brightgreen
 
 ks 是一个为 C++17 设计的现代化、高效、内存安全的组件库。它借鉴了 Rust 的优秀设计理念，提供了一系列比标准库更易用、更安全的工具类，帮助开发者编写更健壮的代码，同时保持高性能。
 
