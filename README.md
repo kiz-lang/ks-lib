@@ -16,25 +16,23 @@ ks 是一个为 C++17 设计的现代化、高效、内存安全的组件库。�
 
 ## 📦 组件列表
 
-组件 描述
+- ks::Result<T, E> 类似 std::expected 或 Rust 的 Result，用于无异常错误处理。
 
-ks::Result<T, E> 类似 std::expected 或 Rust 的 Result，用于无异常错误处理。
+- ks::String UTF-8 字符串，提供类似 Python 的丰富方法（split, strip, replace 等）。
 
-ks::String UTF-8 字符串，提供类似 Python 的丰富方法（split, strip, replace 等）。
+- ks::List<T> 类似 std::vector，但添加了 append, extend, pop, join 等实用方法。
 
-ks::List<T> 类似 std::vector，但添加了 append, extend, pop, join 等实用方法。
+- ks::Dict<T> 紧凑高效的哈希表，键为 ks::String，采用开放地址线性探测，自动扩容。
 
-ks::Dict<T> 紧凑高效的哈希表，键为 ks::String，采用开放地址线性探测，自动扩容。
+- ks::print / ks::println 类似 C++23 std::print 的格式化输出，支持 {} 占位符。
 
-ks::print / ks::println 类似 C++23 std::print 的格式化输出，支持 {} 占位符。
+- ks::Color 命名空间，提供 ANSI 颜色码字符串，可通过宏 KS_DISABLE_COLOR 禁用。
 
-ks::Color 命名空间，提供 ANSI 颜色码字符串，可通过宏 KS_DISABLE_COLOR 禁用。
+- ks::BigInt 无限精度整数，使用 10^9 基底存储，支持高效算术运算（加、减、乘、除、幂）。
 
-ks::BigInt 无限精度整数，使用 10^9 基底存储，支持高效算术运算（加、减、乘、除、幂）。
+- ks::Decimal 高精度十进制小数，基于 BigInt 实现，适合金融等需要精确计算的场景。
 
-ks::Decimal 高精度十进制小数，基于 BigInt 实现，适合金融等需要精确计算的场景。
-
-ks::check(expr, msg) 类似 assert，但接受 ks::String 作为错误消息，并直接终止程序。
+- ks::check(expr, msg) 类似 assert，但接受 ks::String 作为错误消息，并直接终止程序。
 
 ## 📐 编码规范（项目使用）
 
