@@ -240,11 +240,10 @@ public:
     // ---------- 格式化 ----------
     
     /// 简单格式化（仅支持 {} 占位符）
-    auto format(const std::vector<String>& args) const -> String;
-    
-    /// 可变参数模板格式化
+    auto format(const std::vector<String>& args) const -> Result<String, String>;
+
     template<typename... Args>
-    auto format(Args&&... args) const -> String {
+    auto format(Args&&... args) const -> Result<String, String> {
         std::vector<String> vec;
         (vec.push_back(String(to_string(std::forward<Args>(args)))), ...);
         return format(vec);
