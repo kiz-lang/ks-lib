@@ -300,35 +300,37 @@ auto String::endswith(const char* suffix) const -> bool {
     return endswith(String(suffix));
 }
 
+// ==================== 字符分类函数 ====================
+
 auto String::isalpha() const -> bool {
     if (empty()) return false;
-    for (char c : data_) {
-        if (!is_ascii_alpha(c)) return false;
+    for (unsigned char c : data_) {
+        if (!std::isalpha(c)) return false;
     }
     return true;
 }
 
 auto String::isdigit() const -> bool {
     if (empty()) return false;
-    for (char c : data_) {
-        if (!is_ascii_digit(c)) return false;
+    for (unsigned char c : data_) {
+        if (!std::isdigit(c)) return false;
     }
     return true;
 }
 
 auto String::isalnum() const -> bool {
     if (empty()) return false;
-    for (char c : data_) {
-        if (!is_ascii_alnum(c)) return false;
+    for (unsigned char c : data_) {
+        if (!std::isalnum(c)) return false;
     }
     return true;
 }
 
 auto String::islower() const -> bool {
     bool has_lower = false;
-    for (char c : data_) {
-        if (std::isalpha(static_cast<unsigned char>(c))) {
-            if (!std::islower(static_cast<unsigned char>(c))) return false;
+    for (unsigned char c : data_) {
+        if (std::isalpha(c)) {
+            if (!std::islower(c)) return false;
             has_lower = true;
         }
     }
@@ -337,9 +339,9 @@ auto String::islower() const -> bool {
 
 auto String::isupper() const -> bool {
     bool has_upper = false;
-    for (char c : data_) {
-        if (std::isalpha(static_cast<unsigned char>(c))) {
-            if (!std::isupper(static_cast<unsigned char>(c))) return false;
+    for (unsigned char c : data_) {
+        if (std::isalpha(c)) {
+            if (!std::isupper(c)) return false;
             has_upper = true;
         }
     }
@@ -348,20 +350,20 @@ auto String::isupper() const -> bool {
 
 auto String::isspace() const -> bool {
     if (empty()) return false;
-    for (char c : data_) {
-        if (!is_whitespace(c)) return false;
+    for (unsigned char c : data_) {
+        if (!std::isspace(c)) return false;
     }
     return true;
 }
 
 auto String::istitle() const -> bool {
     bool in_word = false;
-    for (char c : data_) {
-        if (is_ascii_alpha(c)) {
+    for (unsigned char c : data_) {
+        if (std::isalpha(c)) {
             if (in_word) {
-                if (!std::islower(static_cast<unsigned char>(c))) return false;
+                if (!std::islower(c)) return false;
             } else {
-                if (!std::isupper(static_cast<unsigned char>(c))) return false;
+                if (!std::isupper(c)) return false;
                 in_word = true;
             }
         } else {
@@ -376,8 +378,8 @@ auto String::istitle() const -> bool {
 auto String::lower() const -> String {
     std::string result;
     result.reserve(len());
-    for (char c : data_) {
-        result.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+    for (unsigned char c : data_) {
+        result.push_back(static_cast<char>(std::tolower(c)));
     }
     return String(std::move(result));
 }
@@ -385,8 +387,8 @@ auto String::lower() const -> String {
 auto String::upper() const -> String {
     std::string result;
     result.reserve(len());
-    for (char c : data_) {
-        result.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
+    for (unsigned char c : data_) {
+        result.push_back(static_cast<char>(std::toupper(c)));
     }
     return String(std::move(result));
 }
@@ -394,8 +396,9 @@ auto String::upper() const -> String {
 auto String::capitalize() const -> String {
     if (empty()) return *this;
     std::string result = data_;
+    // 首字符大写（如果是字母）
     result[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(result[0])));
-    for (SizeType i = 1; i < result.size(); ++i) {
+    for (std::size_t i = 1; i < result.size(); ++i) {
         result[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(result[i])));
     }
     return String(std::move(result));
@@ -405,16 +408,16 @@ auto String::title() const -> String {
     std::string result;
     result.reserve(len());
     bool new_word = true;
-    for (char c : data_) {
-        if (is_ascii_alpha(c)) {
+    for (unsigned char c : data_) {
+        if (std::isalpha(c)) {
             if (new_word) {
-                result.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
+                result.push_back(static_cast<char>(std::toupper(c)));
                 new_word = false;
             } else {
-                result.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+                result.push_back(static_cast<char>(std::tolower(c)));
             }
         } else {
-            result.push_back(c);
+            result.push_back(static_cast<char>(c));
             new_word = true;
         }
     }
@@ -424,22 +427,22 @@ auto String::title() const -> String {
 auto String::swapcase() const -> String {
     std::string result;
     result.reserve(len());
-    for (char c : data_) {
-        if (std::isupper(static_cast<unsigned char>(c))) {
-            result.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-        } else if (std::islower(static_cast<unsigned char>(c))) {
-            result.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
+    for (unsigned char c : data_) {
+        if (std::isupper(c)) {
+            result.push_back(static_cast<char>(std::tolower(c)));
+        } else if (std::islower(c)) {
+            result.push_back(static_cast<char>(std::toupper(c)));
         } else {
-            result.push_back(c);
+            result.push_back(static_cast<char>(c));
         }
     }
     return String(std::move(result));
 }
 
-// ==================== 修剪 / 填充 / 对齐 ====================
+// ==================== 辅助函数 ====================
 
 auto String::is_whitespace(char c) -> bool {
-    return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
+    return std::isspace(static_cast<unsigned char>(c)) != 0;
 }
 
 auto String::trim_left(const String& chars) const -> String {
@@ -754,24 +757,24 @@ auto String::decode(const std::vector<std::uint8_t>& bytes, const char* encoding
 
 // ==================== 格式化 ====================
 
-auto String::format(const std::vector<String>& args) const -> String {
+auto String::format(const std::vector<String>& args) const -> Result<String, String> {
     std::string result;
     SizeType last = 0;
-    SizeType i = 0;
-    while (i < len() - 1) {
-        if (data_[i] == '{' && data_[i+1] == '}') {
+    SizeType arg_index = 0;
+    for (SizeType i = 0; i < len(); ++i) {
+        if (data_[i] == '{' && i + 1 < len() && data_[i+1] == '}') {
             result.append(data_, last, i - last);
-            if (!args.empty()) {
-                result.append(args[0].data_);  // 简化：只使用第一个参数
+            if (arg_index >= args.size()) {
+                return err<String>("not enough arguments for format");
             }
-            i += 2;
-            last = i;
-        } else {
-            ++i;
+            result.append(args[arg_index].data_);
+            ++arg_index;
+            i += 1; // 跳过 '}'
+            last = i + 1;
         }
     }
-    result.append(data_, last);
-    return String(std::move(result));
+    result.append(data_, last, len() - last);
+    return ok(String(std::move(result)));
 }
 
 // ==================== 其他实用 ====================
