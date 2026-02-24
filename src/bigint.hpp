@@ -158,6 +158,12 @@ private:
     /// 无符号除法：|a| / |b|，返回 (商, 余数)，要求 b 非零
     static auto unsigned_div_mod(const BigInt& a, const BigInt& b) -> std::pair<BigInt, BigInt>;
 
+    /// 除法，结果转换为 double（可能损失精度）
+    auto div_to_double(const BigInt& other) const -> Result<double, String>;
+
+    /// 快速幂：base^exp，exp 为非负整数
+    static auto fast_pow_unsigned(const BigInt& base, const BigInt& exp) -> Result<BigInt, String>;
+
     /// 左移乘以 BASE^k（即乘以 10^{9k}）
     auto shift_left(size_t k) const -> BigInt;
 };
