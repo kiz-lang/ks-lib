@@ -146,6 +146,9 @@ public:
     auto rend() const -> ConstReverseIterator { return data_.rend(); }
     auto crend() const -> ConstReverseIterator { return data_.crend(); }
 
+    friend bool operator==(const List& lhs, const List& rhs) { return lhs.data_ == rhs.data_; }
+    friend bool operator!=(const List& lhs, const List& rhs) { return !(lhs == rhs); }
+
     // 容量
     auto empty() const noexcept -> bool {
         return data_.empty();
