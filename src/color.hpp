@@ -3,6 +3,21 @@
 #include <string>
 
 namespace ks {
+
+#ifdef _WIN32
+    #include <windows.h>
+    inline bool init_console() {
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hOut == INVALID_HANDLE_VALUE) return false;
+        DWORD mode = 0;
+        if (!GetConsoleMode(hOut, &mode)) return false;
+        mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        return SetConsoleMode(hOut, mode);
+    }
+#else
+    inline bool init_console() { return true; }
+#endif
+
 namespace Color {
 
 // 宏控制：如果定义了 KS_DISABLE_COLOR，则所有颜色字符串为空；否则为ANSI转义序列
