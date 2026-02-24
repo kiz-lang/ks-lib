@@ -96,51 +96,161 @@ auto BigInt::unsigned_mul(const BigInt& a, const BigInt& b) -> BigInt {
 }
 
 auto BigInt::unsigned_div_mod(const BigInt& a, const BigInt& b) -> std::pair<BigInt, BigInt> {
-    // 长除法，基于 Knuth 算法 D
-    BigInt quotient, remainder;
+    // 要求 b 非零
+    check(!b.is_zero(), "division by zero in unsigned_div_mod");
+
+    // 特殊情况：被除数小于除数
     if (a.abs_less(b)) {
-        remainder = a;
-        quotient = BigInt(0);
-        return {quotient, remainder};
+        return {BigInt(0), a};
     }
 
-    // 简化：使用试商法，每次取被除数的前几位与除数比较
-    // 由于 BASE=10^9，我们可以采用类似于手工除法的方法
-    // 这里实现一个简单的逐位试商，效率可能不是最优，但正确
+    // 复制被除数和除数（绝对值）
+    std::vector<Digit> u = a.data_;  // 被除数，低位在前
+    std::vector<Digit> v = b.data_;  // 除数，低位在前
+    size_t m = u.size() - 1;          // 被除数长度-1
+    size_t n = v.size();              // 除数长度
 
-    // 将被除数 a 的 digits 视为一个 base-BASE 的大数，除数 b 同理
-    // 我们使用长除法：从高位到低位逐步求商
-    quotient.data_.clear();
-    remainder = a;  // 复制一份，将被除数作为初始余数
-    // 除数长度
-    size_t divisor_len = b.data_.size();
-    if (divisor_len == 0) {
-        // 除数应为非零，调用者保证
-        check(false, "division by zero");
+    // 归一化：使 v[n-1] >= BASE/2
+    Digit d = BASE / (v.back() + 1);
+    if (d > 1) {
+        // 缩放 u 和 v
+        DoubleDigit carry = 0;
+        for (size_t i = 0; i < u.size(); ++i) {
+            carry += static_cast<DoubleDigit>(u[i]) * d;
+            u[i] = static_cast<Digit>(carry % BASE);
+            carry /= BASE;
+        }
+        if (carry) u.push_back(static_cast<Digit>(carry));
+        carry = 0;
+        for (size_t i = 0; i < v.size(); ++i) {
+            carry += static_cast<DoubleDigit>(v[i]) * d;
+            v[i] = static_cast<Digit>(carry % BASE);
+            carry /= BASE;
+        }
+        // v 的长度可能增加，但归一化后 v[n-1] 会变大，但不应超过 BASE-1
+        // 确保 v 长度不变（因为 d 最大可能使 v[n-1] 变大但不会进位）
     }
 
-    // 构造一个临时余数向量
-    std::vector<Digit> rem = remainder.data_;  // 低位在前
-    std::vector<Digit> res;  // 商的 digits（高位在前，最后反转）
+    // 现在 v[n-1] >= BASE/2
 
-    // 当 rem 长度大于除数时，每次取 rem 的高 divisor_len 或 divisor_len+1 位试商
-    while (rem.size() > divisor_len || (rem.size() == divisor_len && !(BigInt(rem, false) < b))) {
-        // 取 rem 的最高几位
-        size_t len = rem.size();
-        size_t take = (len > divisor_len) ? divisor_len + 1 : divisor_len;
-        // 构建试商部分
-        BigInt part;
-        part.data_.assign(rem.end() - take, rem.end());  // 注意：part 是低位在前？我们复制时是从高位到低位，所以 part 实际上是高位在前？
-        // 实际上 rem 是低位在前，所以 rem.end()-take 到 rem.end() 是从高位到低位的部分，但构造 BigInt 需要低位在前，所以需要反转。
-        // 简单起见，我们直接用数字运算，但容易出错。另一种方法是使用二分查找试商，但效率较低。
-        // 为了简化，我们暂时不实现除法，因为除法是最复杂的部分。
-        // 注意：这只是一个演示，实际需要完整的长除法实现。
-        // 由于时间限制，我们在此处抛出一个未实现的断言，实际项目中需要完善。
-        check(false, "BigInt division not fully implemented yet");
+    // 商 q 的长度为 m - n + 1 或 m - n + 2，但通常为 m - n + 1
+    BigInt quotient;
+    quotient.data_.resize(m - n + 1, 0);
+    quotient.negative_ = false;
+
+    // 主循环：对每个 j = m-n .. 0
+    for (size_t j = static_cast<size_t>(m - n + 1); j-- > 0; ) {  // j 从 m-n 递减到 0
+        // 试商
+        DoubleDigit qhat;
+        if (u[j + n] >= v.back()) {
+            qhat = BASE - 1;
+        } else {
+            qhat = (static_cast<DoubleDigit>(u[j + n]) * BASE + u[j + n - 1]) / v.back();
+        }
+
+        // 调整 qhat
+        while (qhat * static_cast<DoubleDigit>(v[n-2]) >
+               ( (static_cast<DoubleDigit>(u[j + n]) * BASE + u[j + n - 1] - qhat * v.back()) * BASE + u[j + n - 2] )) {
+            --qhat;
+        }
+
+        // 乘法和减法
+        DoubleDigit carry = 0;
+        DoubleDigit borrow = 0;
+        for (size_t i = 0; i < n; ++i) {
+            DoubleDigit prod = qhat * v[i] + carry;
+            carry = prod / BASE;
+            Digit prod_digit = static_cast<Digit>(prod % BASE);
+            DoubleDigit sub = static_cast<DoubleDigit>(u[j + i]) - prod_digit - borrow;
+            if (sub > u[j + i]) { // 借位
+                sub += BASE;
+                borrow = 1;
+            } else {
+                borrow = 0;
+            }
+            u[j + i] = static_cast<Digit>(sub);
+        }
+        // 处理最高位
+        DoubleDigit final_sub = static_cast<DoubleDigit>(u[j + n]) - carry - borrow;
+        if (final_sub > u[j + n]) {
+            final_sub += BASE;
+            borrow = 1;
+        } else {
+            borrow = 0;
+        }
+        u[j + n] = static_cast<Digit>(final_sub);
+
+        // 如果借位为 1，说明 qhat 过大，需要加回（减过头了）
+        if (borrow) {
+            --qhat;
+            carry = 0;
+            for (size_t i = 0; i < n; ++i) {
+                DoubleDigit sum = static_cast<DoubleDigit>(u[j + i]) + v[i] + carry;
+                u[j + i] = static_cast<Digit>(sum % BASE);
+                carry = sum / BASE;
+            }
+            u[j + n] += static_cast<Digit>(carry);
+        }
+
+        quotient.data_[j] = static_cast<Digit>(qhat);
     }
 
-    // 占位返回
-    return {BigInt(0), BigInt(0)};
+    // 去除商的前导零
+    quotient.trim();
+
+    // 余数需要反缩放（除以 d）
+    BigInt remainder;
+    remainder.data_.assign(u.begin(), u.begin() + n);
+    remainder.trim();
+    if (d > 1) {
+        // 除以 d
+        DoubleDigit carry = 0;
+        for (size_t i = remainder.data_.size(); i-- > 0; ) {
+            DoubleDigit cur = carry * BASE + remainder.data_[i];
+            remainder.data_[i] = static_cast<Digit>(cur / d);
+            carry = cur % d;
+        }
+        remainder.trim();
+    }
+
+    return {quotient, remainder};
+}
+
+auto BigInt::div_to_double(const Bigint& other) const -> Result<double, String> {
+    if (other.is_zero()) {
+        return err<double>("division by zero in div_to_double");
+    }
+    // 将被除数和除数转换为 double（注意溢出）
+    // 由于 double 只有 53 位精度，我们只取高位部分
+    // 简单做法：先转换为字符串再转 double（效率低但可靠）
+    // 或者使用科学计数法估算
+    double a = std::strtod(this->to_string().c_str(), nullptr);
+    double b = std::strtod(other.to_string().c_str(), nullptr);
+    if (b == 0.0) return err<double>("division by zero");
+    double result = a / b;
+    // 处理符号
+    if (this->negative_ != other.negative_) result = -result;
+    return ok(result);
+}
+
+auto BigInt::fast_pow_unsigned(const Bigint& base, const Bigint& exp) -> Result<Bigint, String> {
+    if (exp.sign() < 0) {
+        return err<Bigint>("negative exponent not allowed in fast_pow_unsigned");
+    }
+    if (exp.is_zero()) {
+        return ok(Bigint(1));
+    }
+    Bigint result(1);
+    Bigint cur_base = base;
+    Bigint cur_exp = exp;
+    while (!cur_exp.is_zero()) {
+        if (cur_exp.data_[0] & 1) { // 奇数
+            result = result * cur_base;
+        }
+        cur_base = cur_base * cur_base;
+        cur_exp = cur_exp / Bigint(2); // 使用除法
+    }
+    return ok(result);
 }
 
 auto BigInt::shift_left(size_t k) const -> BigInt {
@@ -410,8 +520,9 @@ auto BigInt::to_int64() const -> Result<int64_t, String> {
             return err<int64_t>("value exceeds int64_t max");
         }
         auto res = to_uint64();
-        if (res.is_err()) return propagate_err<int64_t>(res);
-        return ok(static_cast<int64_t>(res.value()));
+        if (res.is_err()) {
+            return err<int64_t>(res.error()); // 直接返回错误
+        }
     }
 }
 
