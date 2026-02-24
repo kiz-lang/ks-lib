@@ -146,12 +146,46 @@ private:
 template<typename T>
 class KeysView {
 public:
-    using Iterator = DictConstIterator<T>;
+    class Iterator {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = const String;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const String*;
+        using reference = const String&;
+
+        Iterator(DictConstIterator<T> it) : it_(it) {}
+
+        auto operator*() -> reference { return it_->key; }
+        auto operator->() -> pointer { return &it_->key; }
+
+        auto operator++() -> Iterator& {
+            ++it_;
+            return *this;
+        }
+
+        auto operator++(int) -> Iterator {
+            auto tmp = *this;
+            ++*this;
+            return tmp;
+        }
+
+        friend auto operator==(const Iterator& a, const Iterator& b) -> bool {
+            return a.it_ == b.it_;
+        }
+
+        friend auto operator!=(const Iterator& a, const Iterator& b) -> bool {
+            return !(a == b);
+        }
+
+    private:
+        DictConstIterator<T> it_;
+    };
 
     KeysView(const Dict<T>* dict) : dict_(dict) {}
 
-    auto begin() const -> Iterator { return dict_->begin(); }
-    auto end() const -> Iterator { return dict_->end(); }
+    auto begin() const -> Iterator { return Iterator(dict_->begin()); }
+    auto end() const -> Iterator { return Iterator(dict_->end()); }
 
 private:
     const Dict<T>* dict_;
@@ -532,9 +566,11 @@ private:
                 // 找到空位，如果之前有已删除位置，优先使用已删除
                 if (first_deleted) {
                     index = *first_deleted;
+                    --deleted_count_;  // <--- 修复：重用已删除槽位时减少计数
                 }
-                // 在 index 处插入
+                // 初始化条目（确保 value 被默认构造）
                 entries_[index].key = key;
+                entries_[index].value = T{};  // 安全初始化
                 entries_[index].state = detail::SlotState::Occupied;
                 ++size_;
                 return {&entries_[index], true};
