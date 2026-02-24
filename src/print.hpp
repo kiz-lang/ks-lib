@@ -42,31 +42,42 @@ auto to_string_impl(T&& value) -> String {
 /// 内部格式化函数：将格式字符串 fmt 中的 {} 依次替换为 args 的字符串表示
 template<typename... Args>
 auto format_to_string(const String& fmt, Args&&... args) -> String {
-    // 将所有参数转换为 String 并存入数组
-    String arg_strings[] = { detail::to_string_impl(std::forward<Args>(args))... };
-    const size_t arg_count = sizeof...(args);
-
+    std::array<String, sizeof...(args)> arg_strings = {
+        detail::to_string_impl(std::forward<Args>(args))...
+    };
     std::string result;
     const char* f = fmt.c_str();
     size_t f_len = fmt.len();
     size_t arg_index = 0;
 
     for (size_t i = 0; i < f_len; ) {
-        if (f[i] == '{' && i + 1 < f_len && f[i + 1] == '}') {
-            // 检查参数数量是否足够
-            ks::check(arg_index < arg_count, "format error: too few arguments");
-            result += arg_strings[arg_index].c_str();
-            ++arg_index;
-            i += 2;
-        } else {
-            result += f[i];
-            ++i;
+        if (f[i] == '{') {
+            if (i + 1 < f_len && f[i + 1] == '{') {
+                result += '{';
+                i += 2;
+                continue;
+            } else if (i + 1 < f_len && f[i + 1] == '}') {
+                ks::check(arg_index < arg_strings.size(),
+                          "format error: too few arguments");
+                result.append(arg_strings[arg_index].c_str(),
+                              arg_strings[arg_index].len());
+                ++arg_index;
+                i += 2;
+                continue;
+            }
+        } else if (f[i] == '}') {
+            if (i + 1 < f_len && f[i + 1] == '}') {
+                result += '}';
+                i += 2;
+                continue;
+            }
         }
+        result += f[i];
+        ++i;
     }
 
-    // 检查是否有未使用的参数
-    ks::check(arg_index == arg_count, "format error: too many arguments");
-
+    ks::check(arg_index == arg_strings.size(),
+              "format error: too many arguments");
     return String(std::move(result));
 }
 
