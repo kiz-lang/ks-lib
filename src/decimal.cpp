@@ -30,12 +30,13 @@ auto Decimal::align_exponent(const Decimal& a, const Decimal& b,
                              BigInt& a_mant, BigInt& b_mant) -> int {
     int common_exp = std::min(a.exponent_, b.exponent_);
     int a_scale = a.exponent_ - common_exp;
+    
     int b_scale = b.exponent_ - common_exp;
 
     BigInt ten(10);
     a_mant = a.mantissa_;
     if (a_scale > 0) {
-        a_mant = a_mant * BigInt::fast_pow_unsigned(ten, BigInt(a_scale)).value();
+         a_mant = a_mant * BigInt::fast_pow_unsigned(ten, BigInt(a_scale)).value(); // 假设成功
     }
     b_mant = b.mantissa_;
     if (b_scale > 0) {
@@ -378,7 +379,11 @@ auto Decimal::pow(const BigInt& exponent) const -> Result<Decimal, String> {
     }
     // 尾数部分进行幂运算
     auto mant_pow_res = mantissa_.abs().pow(exponent);
-    if (mant_pow_res.is_err()) return propagate_err<Decimal>(mant_pow_res);
+
+    auto mant_pow_res = mantissa_.abs().pow(exponent);
+    if (mant_pow_res.is_err()) {
+        return err<Decimal>(mant_pow_res.error()); // 直接返回错误
+    }
     BigInt mant_pow = mant_pow_res.value();
 
     // 确定符号：底数为负且指数为奇数时结果为负
